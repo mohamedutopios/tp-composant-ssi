@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HôpitalSim V1 — Schéma des liens</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e1a; --bg2: #0f1525; --bg3: #141c2e;
+  --border: rgba(99,179,237,0.15);
+  --blue: #63b3ed; --blue-dim: rgba(99,179,237,0.12);
+  --green: #68d391; --green-dim: rgba(104,211,145,0.12);
+  --amber: #f6ad55; --amber-dim: rgba(246,173,85,0.12);
+  --red: #fc8181; --red-dim: rgba(252,129,129,0.12);
+  --purple: #b794f4; --purple-dim: rgba(183,148,244,0.12);
+  --teal: #4fd1c5; --teal-dim: rgba(79,209,197,0.12);
+  --coral: #fc8181; --coral-dim: rgba(252,129,129,0.12);
+  --text: #e2e8f0; --text-dim: #718096; --text-muted: #4a5568;
+  --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none; z-index: 0;
+}
+.page { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+.header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+.header h1 { font-family: var(--mono); font-size: 26px; color: var(--blue); margin-bottom: 4px; }
+.header .sub { font-size: 13px; color: var(--text-dim); }
+.badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 4px; border: 1px solid; }
+.badge-warn { color: var(--red); border-color: rgba(252,129,129,0.3); background: var(--red-dim); }
+.section-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.diagram-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 40px; overflow-x: auto; }
+svg text { font-family: var(--sans); }
+.node { cursor: pointer; }
+.node:hover { opacity: 0.85; }
+.legend { display: flex; flex-wrap: wrap; gap: 20px; padding: 16px 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 40px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+.legend-line { width: 32px; height: 2px; flex-shrink: 0; }
+.legend-dash { width: 32px; height: 0; border-top: 2px dashed; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <div>
+    <h1>HôpitalSim V1 — Schéma des liens</h1>
+    <div class="sub">Architecture complète · Flux de données · Réseaux Docker</div>
+  </div>
+  <div class="badge badge-warn">Phase 1 — Sans SSI · 6 failles intentionnelles</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAMME 1 — VUE D'ENSEMBLE -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Vue d'ensemble — tous les composants et leurs liaisons</div>
+<div class="diagram-wrap">
+<svg width="100%" viewBox="0 0 1100 820" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- ── Utilisateurs ─────────────────────────────────── -->
+<rect x="380" y="20" width="340" height="50" rx="8" fill="rgba(113,128,150,0.12)" stroke="rgba(113,128,150,0.4)" stroke-width="0.5"/>
+<text x="550" y="40" text-anchor="middle" font-family="'Space Mono'" font-size="13" font-weight="700" fill="#a0aec0">Utilisateurs</text>
+<text x="550" y="58" text-anchor="middle" font-family="'DM Sans'" font-size="11" fill="#718096">jean.dupont · marie.manager · pierre.employe · admin.hopital</text>
+
+<!-- flèche login -->
+<line x1="550" y1="70" x2="550" y2="118" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="558" y="98" font-family="'DM Sans'" font-size="11" fill="#63b3ed">1. POST /token</text>
+
+<!-- ── KEYCLOAK ──────────────────────────────────────── -->
+<rect x="380" y="118" width="340" height="60" rx="8" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.5)" stroke-width="0.5"/>
+<text x="550" y="140" text-anchor="middle" font-family="'Space Mono'" font-size="13" font-weight="700" fill="#63b3ed">Keycloak :8080</text>
+<text x="550" y="158" text-anchor="middle" font-family="'DM Sans'" font-size="11" fill="#4a90d9">Identity Provider — realm hopital — RS256 — TTL 3600s</text>
+<!-- port badge -->
+<rect x="688" y="126" width="24" height="18" rx="3" fill="rgba(99,179,237,0.2)" stroke="rgba(99,179,237,0.3)" stroke-width="0.5"/>
+<text x="700" y="138" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#63b3ed">8080</text>
+
+<!-- Keycloak → LDAP (vérif) -->
+<line x1="720" y1="148" x2="828" y2="148" stroke="#4fd1c5" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="770" y="142" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">2. LDAP bind</text>
+<line x1="828" y1="162" x2="720" y2="162" stroke="#4fd1c5" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+<text x="770" y="176" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">3. user OK</text>
+
+<!-- Keycloak → PostgreSQL KC -->
+<line x1="550" y1="178" x2="550" y2="220" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="558" y="205" font-family="'DM Sans'" font-size="10" fill="#718096">sessions</text>
+
+<!-- ── PostgreSQL KC ─────────────────────────────────── -->
+<rect x="460" y="220" width="180" height="44" rx="8" fill="rgba(104,211,145,0.12)" stroke="rgba(104,211,145,0.4)" stroke-width="0.5"/>
+<text x="550" y="238" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#68d391">PostgreSQL KC</text>
+<text x="550" y="253" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a9e72">Realm, sessions, clients</text>
+
+<!-- JWT retour navigateur -->
+<path d="M450 148 L400 148 L400 45" fill="none" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="368" y="100" font-family="'DM Sans'" font-size="10" fill="#63b3ed" text-anchor="end">4. JWT RS256</text>
+
+<!-- ── VAULT ──────────────────────────────────────────── -->
+<rect x="20" y="118" width="160" height="60" rx="8" fill="rgba(246,173,85,0.12)" stroke="rgba(246,173,85,0.5)" stroke-width="0.5"/>
+<text x="100" y="140" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#f6ad55">Vault :8200</text>
+<text x="100" y="158" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c9862a">Secrets BDD + Keycloak</text>
+<text x="100" y="172" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#f6ad55">token: myroot_token_12345</text>
+
+<!-- ── OPENLDAP ────────────────────────────────────────── -->
+<rect x="828" y="118" width="152" height="60" rx="8" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.5)" stroke-width="0.5"/>
+<text x="904" y="140" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#4fd1c5">OpenLDAP :389</text>
+<text x="904" y="158" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">ou=People,dc=utopios,dc=local</text>
+<text x="904" y="172" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">4 utilisateurs hospitaliers</text>
+
+<!-- ── Séparateur JWT ──────────────────────────────────── -->
+<line x1="20" y1="310" x2="1060" y2="310" stroke="rgba(99,179,237,0.2)" stroke-width="0.5" stroke-dasharray="5 4"/>
+<text x="550" y="305" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">5. Bearer JWT — toutes les requêtes API portent le token dans l'en-tête Authorization</text>
+
+<!-- ═══════════════════ COUCHE APPLICATIONS ═══════════════════════ -->
+
+<!-- ── DPI ────────────────────────────────────────────── -->
+<rect x="20" y="325" width="310" height="340" rx="10" fill="rgba(183,148,244,0.04)" stroke="rgba(183,148,244,0.25)" stroke-width="0.5" stroke-dasharray="6 3"/>
+<text x="36" y="348" font-family="'Space Mono'" font-size="10" fill="#9f7aea">DPI — Dossier Patient</text>
+
+<rect x="36" y="358" width="278" height="50" rx="6" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.4)" stroke-width="0.5"/>
+<text x="175" y="378" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#b794f4">Frontend :3001</text>
+<text x="175" y="395" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#9f7aea">React 18 · nginx · jean.dupont / Jean2024!</text>
+
+<rect x="36" y="428" width="278" height="56" rx="6" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.4)" stroke-width="0.5"/>
+<text x="175" y="448" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#b794f4">Backend :4000</text>
+<text x="175" y="464" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#9f7aea">Node.js · Express · express-jwt · jwks-rsa</text>
+<text x="175" y="478" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#fc8181">F1: SQL injection ?search= · F2: IDOR patients · F4: CORS *</text>
+
+<rect x="36" y="504" width="278" height="44" rx="6" fill="rgba(104,211,145,0.12)" stroke="rgba(104,211,145,0.4)" stroke-width="0.5"/>
+<text x="175" y="522" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#68d391">PostgreSQL DPI</text>
+<text x="175" y="537" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a9e72">patients · consultations · prescriptions</text>
+
+<!-- DPI verticaux -->
+<line x1="175" y1="408" x2="175" y2="428" stroke="#b794f4" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="175" y1="484" x2="175" y2="504" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- DPI → JWKS -->
+<path d="M175 358 L175 325 L550 325 L550 178" fill="none" stroke="#63b3ed" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+<text x="340" y="320" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">6. JWKS /certs</text>
+
+<!-- Vault → DPI backend (secrets) -->
+<path d="M100 178 L100 560 L36 560" fill="none" stroke="#f6ad55" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+
+<!-- DPI routes détail -->
+<rect x="36" y="560" width="278" height="90" rx="6" fill="rgba(183,148,244,0.06)" stroke="rgba(183,148,244,0.2)" stroke-width="0.5"/>
+<text x="50" y="578" font-family="'Space Mono'" font-size="9" fill="#9f7aea">Routes API :</text>
+<text x="50" y="594" font-family="'Space Mono'" font-size="9" fill="#718096">GET  /api/patients?search=&lt;injection&gt;</text>
+<text x="50" y="610" font-family="'Space Mono'" font-size="9" fill="#718096">GET  /api/patients/:id (IDOR)</text>
+<text x="50" y="626" font-family="'Space Mono'" font-size="9" fill="#718096">POST /api/patients/:id/consultations</text>
+<text x="50" y="642" font-family="'Space Mono'" font-size="9" fill="#718096">POST /api/patients/:id/prescriptions</text>
+
+<!-- ── RDV ────────────────────────────────────────────── -->
+<rect x="380" y="325" width="310" height="340" rx="10" fill="rgba(79,209,197,0.04)" stroke="rgba(79,209,197,0.25)" stroke-width="0.5" stroke-dasharray="6 3"/>
+<text x="396" y="348" font-family="'Space Mono'" font-size="10" fill="#2a8f86">RDV — Rendez-vous</text>
+
+<rect x="396" y="358" width="278" height="50" rx="6" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.4)" stroke-width="0.5"/>
+<text x="535" y="378" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#4fd1c5">Frontend :3002</text>
+<text x="535" y="395" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">React 18 · nginx · pierre.employe / Pierre2024!</text>
+
+<rect x="396" y="428" width="278" height="56" rx="6" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.4)" stroke-width="0.5"/>
+<text x="535" y="448" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#4fd1c5">Backend :4000</text>
+<text x="535" y="464" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">Node.js · Mongoose · express-jwt · jwks-rsa</text>
+<text x="535" y="478" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#fc8181">F1: BOLA — tout user voit tout RDV</text>
+
+<rect x="396" y="504" width="278" height="44" rx="6" fill="rgba(104,211,145,0.12)" stroke="rgba(104,211,145,0.4)" stroke-width="0.5"/>
+<text x="535" y="522" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#68d391">MongoDB RDV</text>
+<text x="535" y="537" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a9e72">rendezvous · praticiens · creneaux</text>
+
+<!-- RDV verticaux -->
+<line x1="535" y1="408" x2="535" y2="428" stroke="#4fd1c5" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="535" y1="484" x2="535" y2="504" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- RDV routes détail -->
+<rect x="396" y="560" width="278" height="90" rx="6" fill="rgba(79,209,197,0.06)" stroke="rgba(79,209,197,0.2)" stroke-width="0.5"/>
+<text x="410" y="578" font-family="'Space Mono'" font-size="9" fill="#2a8f86">Routes API :</text>
+<text x="410" y="594" font-family="'Space Mono'" font-size="9" fill="#718096">GET  /api/rdv (tous les rdv — BOLA)</text>
+<text x="410" y="610" font-family="'Space Mono'" font-size="9" fill="#718096">POST /api/rdv</text>
+<text x="410" y="626" font-family="'Space Mono'" font-size="9" fill="#718096">PATCH /api/rdv/:id/annuler</text>
+<text x="410" y="642" font-family="'Space Mono'" font-size="9" fill="#718096">GET  /api/praticiens</text>
+
+<!-- ── RH ─────────────────────────────────────────────── -->
+<rect x="740" y="325" width="300" height="340" rx="10" fill="rgba(252,129,129,0.04)" stroke="rgba(252,129,129,0.25)" stroke-width="0.5" stroke-dasharray="6 3"/>
+<text x="756" y="348" font-family="'Space Mono'" font-size="10" fill="#c53030">RH — Ressources Humaines</text>
+
+<rect x="756" y="358" width="268" height="50" rx="6" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.4)" stroke-width="0.5"/>
+<text x="890" y="378" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#fc8181">Frontend :3003</text>
+<text x="890" y="395" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">React 18 · nginx · marie.manager / Marie2024!</text>
+
+<rect x="756" y="428" width="268" height="56" rx="6" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.4)" stroke-width="0.5"/>
+<text x="890" y="448" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#fc8181">Backend :4000</text>
+<text x="890" y="464" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">Node.js · pg · express-jwt · jwks-rsa</text>
+<text x="890" y="478" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#fc8181">F1: IDOR /api/paie/:id · F2: IBAN exposé · F3: CSV sans rôle</text>
+
+<rect x="756" y="504" width="268" height="44" rx="6" fill="rgba(104,211,145,0.12)" stroke="rgba(104,211,145,0.4)" stroke-width="0.5"/>
+<text x="890" y="522" text-anchor="middle" font-family="'Space Mono'" font-size="12" font-weight="700" fill="#68d391">PostgreSQL RH</text>
+<text x="890" y="537" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a9e72">employes · contrats · fiches_paie (IBAN) · conges</text>
+
+<!-- RH verticaux -->
+<line x1="890" y1="408" x2="890" y2="428" stroke="#fc8181" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="890" y1="484" x2="890" y2="504" stroke="#888" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- RH → JWKS -->
+<path d="M890 358 L890 325 L550 325" fill="none" stroke="#63b3ed" stroke-width="0.5" stroke-dasharray="4 3"/>
+
+<!-- RH routes détail -->
+<rect x="756" y="560" width="268" height="90" rx="6" fill="rgba(252,129,129,0.06)" stroke="rgba(252,129,129,0.2)" stroke-width="0.5"/>
+<text x="770" y="578" font-family="'Space Mono'" font-size="9" fill="#c53030">Routes API :</text>
+<text x="770" y="594" font-family="'Space Mono'" font-size="9" fill="#718096">GET /api/employes</text>
+<text x="770" y="610" font-family="'Space Mono'" font-size="9" fill="#fc8181">GET /api/paie/:id   ← IDOR + IBAN</text>
+<text x="770" y="626" font-family="'Space Mono'" font-size="9" fill="#fc8181">GET /api/paie/export/csv ← sans rôle</text>
+<text x="770" y="642" font-family="'Space Mono'" font-size="9" fill="#718096">POST /api/conges · PATCH /api/conges/:id</text>
+
+<!-- Vault → RH backend -->
+<path d="M100 178 L100 680 L756 680 L756 512" fill="none" stroke="#f6ad55" stroke-width="0.5" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+<text x="56" y="690" font-family="'DM Sans'" font-size="10" fill="#f6ad55">secrets Vault</text>
+
+<!-- ─── KALI ───────────────────────────────────────────── -->
+<rect x="380" y="700" width="340" height="60" rx="8" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.5)" stroke-width="0.5"/>
+<text x="550" y="720" text-anchor="middle" font-family="'Space Mono'" font-size="13" font-weight="700" fill="#fc8181">Kali Linux — bash /kali/attaques.sh</text>
+<text x="550" y="738" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">Résultat V1 : 6/6 attaques réussissent · 0 alerte générée</text>
+
+<!-- Kali → Keycloak (A1) -->
+<path d="M460 700 L440 178" fill="none" stroke="#fc8181" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+<text x="405" y="440" font-family="'DM Sans'" font-size="10" fill="#fc8181">A1 brute-force</text>
+
+<!-- Kali → DPI backend (A2 SQLi) -->
+<path d="M400 730 L175 484" fill="none" stroke="#fc8181" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+<text x="248" y="640" font-family="'DM Sans'" font-size="10" fill="#fc8181">A2 SQL inj.</text>
+
+<!-- Kali → RH backend (A3 IDOR) -->
+<path d="M700 730 L890 484" fill="none" stroke="#fc8181" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+<text x="810" y="640" font-family="'DM Sans'" font-size="10" fill="#fc8181">A3 IDOR</text>
+
+<!-- Kali → OpenLDAP (A4) -->
+<path d="M720 720 L904 178" fill="none" stroke="#fc8181" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+<text x="840" y="440" font-family="'DM Sans'" font-size="10" fill="#fc8181">A4 LDAP</text>
+
+<!-- Kali → Vault (A6) -->
+<path d="M380 720 L180 178" fill="none" stroke="#fc8181" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+<text x="230" y="460" font-family="'DM Sans'" font-size="10" fill="#fc8181">A6 Vault dump</text>
+
+<!-- A5 JWT (annotation) -->
+<rect x="36" y="700" width="310" height="36" rx="6" fill="rgba(252,129,129,0.08)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="191" y="718" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#fc8181">A5 — Vol JWT : token intercepté réutilisé 1h depuis n'importe quelle IP</text>
+<text x="191" y="732" text-anchor="middle" font-family="'Space Mono'" font-size="9" fill="#c53030">Authorization: Bearer &lt;token_volé&gt; → accès DPI/RH/RDV</text>
+
+</svg>
+</div>
+
+<!-- LÉGENDE 1 -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-line" style="background:#63b3ed"></div>Flux JWT (login + réponse token)</div>
+  <div class="legend-item"><div class="legend-dash" style="border-color:#63b3ed"></div>Validation JWKS (/certs)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#888"></div>Lecture/écriture BDD</div>
+  <div class="legend-item"><div class="legend-dash" style="border-color:#f6ad55"></div>Secrets Vault</div>
+  <div class="legend-item"><div class="legend-dash" style="border-color:#4fd1c5"></div>LDAP bind (vérification)</div>
+  <div class="legend-item"><div class="legend-dash" style="border-color:#fc8181"></div>Attaques Kali</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAMME 2 — FLUX JWT SÉQUENTIEL -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Flux JWT — séquence d'authentification étape par étape</div>
+<div class="diagram-wrap">
+<svg width="100%" viewBox="0 0 1100 420" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- Acteurs -->
+<rect x="20" y="20" width="110" height="44" rx="8" fill="rgba(113,128,150,0.12)" stroke="rgba(113,128,150,0.4)" stroke-width="0.5"/>
+<text x="75" y="42" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#a0aec0">Navigateur</text>
+
+<rect x="280" y="20" width="160" height="44" rx="8" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.4)" stroke-width="0.5"/>
+<text x="360" y="38" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">Keycloak :8080</text>
+<text x="360" y="54" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#4a90d9">Identity Provider</text>
+
+<rect x="570" y="20" width="140" height="44" rx="8" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.4)" stroke-width="0.5"/>
+<text x="640" y="38" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#4fd1c5">OpenLDAP :389</text>
+<text x="640" y="54" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#2a8f86">Annuaire utilisateurs</text>
+
+<rect x="860" y="20" width="220" height="44" rx="8" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.4)" stroke-width="0.5"/>
+<text x="970" y="38" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#b794f4">Backend API</text>
+<text x="970" y="54" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#9f7aea">DPI / RDV / RH · Node.js :4000</text>
+
+<!-- Lignes de vie -->
+<line x1="75" y1="64" x2="75" y2="400" stroke="rgba(160,174,192,0.2)" stroke-width="0.5" stroke-dasharray="4 3"/>
+<line x1="360" y1="64" x2="360" y2="400" stroke="rgba(99,179,237,0.2)" stroke-width="0.5" stroke-dasharray="4 3"/>
+<line x1="640" y1="64" x2="640" y2="400" stroke="rgba(79,209,197,0.2)" stroke-width="0.5" stroke-dasharray="4 3"/>
+<line x1="970" y1="64" x2="970" y2="400" stroke="rgba(183,148,244,0.2)" stroke-width="0.5" stroke-dasharray="4 3"/>
+
+<!-- Étape 1 -->
+<line x1="75" y1="95" x2="352" y2="95" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#arr2)"/>
+<rect x="100" y="80" width="200" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="200" y="91" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">1. POST /token — username + password</text>
+
+<!-- Étape 2 -->
+<line x1="360" y1="130" x2="632" y2="130" stroke="#4fd1c5" stroke-width="1.5" marker-end="url(#arr2)"/>
+<rect x="380" y="115" width="210" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="496" y="126" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">2. LDAP bind — vérification credentials</text>
+
+<!-- Étape 3 -->
+<line x1="640" y1="165" x2="368" y2="165" stroke="#4fd1c5" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+<rect x="390" y="150" width="200" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="490" y="161" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">3. User OK + attributs (uid, mail, groupes)</text>
+
+<!-- Étape 4 -->
+<line x1="360" y1="205" x2="83" y2="205" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#arr2)"/>
+<rect x="90" y="190" width="240" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="215" y="201" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">4. JWT RS256 signé — TTL 3600s — {sub, email, roles, exp}</text>
+
+<!-- Étape 5 -->
+<line x1="75" y1="250" x2="962" y2="250" stroke="#b794f4" stroke-width="1.5" marker-end="url(#arr2)"/>
+<rect x="200" y="235" width="600" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="500" y="246" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#b794f4">5. GET /api/patients?search=... — Authorization: Bearer &lt;JWT&gt;</text>
+
+<!-- Étape 6 -->
+<line x1="970" y1="285" x2="368" y2="285" stroke="#63b3ed" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+<rect x="380" y="270" width="550" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="680" y="281" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">6. GET /realms/hopital/protocol/openid-connect/certs — JWKS (clé publique RS256)</text>
+
+<!-- Étape 7 -->
+<line x1="970" y1="330" x2="83" y2="330" stroke="#b794f4" stroke-width="1.5" marker-end="url(#arr2)"/>
+<rect x="200" y="315" width="550" height="16" rx="3" fill="var(--bg2, #0f1525)"/>
+<text x="500" y="326" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#b794f4">7. 200 OK — [{id:1, nom:"Martin"...}, ...] — données patients</text>
+
+<!-- Note faille A5 -->
+<rect x="20" y="355" width="500" height="32" rx="4" fill="rgba(252,129,129,0.08)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="32" y="370" font-family="'DM Sans'" font-size="10" fill="#fc8181">Faille A5 — Le JWT est valide 1h sans révocation possible. Intercepté sur HTTP, il peut être réutilisé</text>
+<text x="32" y="383" font-family="'DM Sans'" font-size="10" fill="#fc8181">depuis n'importe quelle IP. Aucune vérification de l'IP d'origine côté backend.</text>
+
+<!-- Note faille A1 -->
+<rect x="540" y="355" width="540" height="32" rx="4" fill="rgba(252,129,129,0.08)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="552" y="370" font-family="'DM Sans'" font-size="10" fill="#fc8181">Faille A1 — L'étape 1 n'a pas de rate-limiting. Kali peut boucler sur des milliers de mots de passe</text>
+<text x="552" y="383" font-family="'DM Sans'" font-size="10" fill="#fc8181">sans délai imposé, sans lockout de compte, sans CAPTCHA.</text>
+</svg>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- DIAGRAMME 3 — RÉSEAUX DOCKER -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Réseaux Docker — isolation et appartenance des conteneurs</div>
+<div class="diagram-wrap">
+<svg width="100%" viewBox="0 0 1100 540" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<!-- ── iam_net ──────────────────────────────────────────────── -->
+<rect x="20" y="20" width="340" height="290" rx="14" fill="rgba(99,179,237,0.05)" stroke="rgba(99,179,237,0.4)" stroke-width="0.5" stroke-dasharray="6 4"/>
+<text x="36" y="44" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">iam_net — 172.20.0.0/24</text>
+<text x="36" y="60" font-family="'DM Sans'" font-size="10" fill="#4a90d9">Services IAM — authentification et secrets</text>
+
+<rect x="36" y="72" width="148" height="44" rx="6" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.4)" stroke-width="0.5"/>
+<text x="110" y="90" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">Keycloak</text>
+<text x="110" y="106" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a90d9">:8080 — multihomed</text>
+
+<rect x="196" y="72" width="148" height="44" rx="6" fill="rgba(104,211,145,0.12)" stroke="rgba(104,211,145,0.4)" stroke-width="0.5"/>
+<text x="270" y="90" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#68d391">postgres-kc</text>
+<text x="270" y="106" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a9e72">:5432 — BDD Keycloak</text>
+
+<rect x="36" y="130" width="148" height="44" rx="6" fill="rgba(246,173,85,0.12)" stroke="rgba(246,173,85,0.4)" stroke-width="0.5"/>
+<text x="110" y="148" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#f6ad55">Vault</text>
+<text x="110" y="164" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c9862a">:8200 — Secrets</text>
+
+<rect x="196" y="130" width="148" height="44" rx="6" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.4)" stroke-width="0.5"/>
+<text x="270" y="148" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#4fd1c5">OpenLDAP</text>
+<text x="270" y="164" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">:389 — Annuaire</text>
+
+<rect x="36" y="188" width="148" height="44" rx="6" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.4)" stroke-width="0.5"/>
+<text x="110" y="206" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#fc8181">Kali</text>
+<text x="110" y="222" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">attaquant — multihomed</text>
+
+<rect x="196" y="188" width="148" height="44" rx="6" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.4)" stroke-width="0.5"/>
+<text x="270" y="206" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#4fd1c5">phpLDAPadmin</text>
+<text x="270" y="222" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#2a8f86">:6443 — Interface LDAP</text>
+
+<!-- Liaisons internes iam_net -->
+<line x1="184" y1="94" x2="196" y2="94" stroke="#63b3ed" stroke-width="0.5"/>
+<line x1="110" y1="116" x2="110" y2="130" stroke="#888" stroke-width="0.5" marker-end="url(#arr3)"/>
+<text x="118" y="126" font-family="'DM Sans'" font-size="9" fill="#718096">sessions</text>
+
+<!-- ── app_net ──────────────────────────────────────────────── -->
+<rect x="400" y="20" width="680" height="390" rx="14" fill="rgba(104,211,145,0.04)" stroke="rgba(104,211,145,0.35)" stroke-width="0.5" stroke-dasharray="6 4"/>
+<text x="416" y="44" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#68d391">app_net — 172.21.0.0/24</text>
+<text x="416" y="60" font-family="'DM Sans'" font-size="10" fill="#4a9e72">Services applicatifs — APIs + BDD + Frontends</text>
+
+<!-- Keycloak dans app_net (multihomed) -->
+<rect x="416" y="72" width="148" height="44" rx="6" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.4)" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="490" y="90" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">Keycloak</text>
+<text x="490" y="106" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4a90d9">aussi dans iam_net</text>
+
+<!-- DPI dans app_net -->
+<rect x="416" y="132" width="200" height="120" rx="8" fill="rgba(183,148,244,0.06)" stroke="rgba(183,148,244,0.3)" stroke-width="0.5"/>
+<text x="428" y="150" font-family="'Space Mono'" font-size="9" fill="#9f7aea">DPI</text>
+<rect x="428" y="158" width="176" height="28" rx="4" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.3)" stroke-width="0.5"/>
+<text x="516" y="177" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#b794f4">dpi-frontend :3001 → nginx:80</text>
+<rect x="428" y="194" width="176" height="28" rx="4" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.3)" stroke-width="0.5"/>
+<text x="516" y="213" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#b794f4">dpi-backend :4000 (interne)</text>
+<rect x="428" y="230" width="176" height="16" rx="4" fill="rgba(104,211,145,0.1)" stroke="rgba(104,211,145,0.3)" stroke-width="0.5"/>
+<text x="516" y="241" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#68d391">postgres-dpi :5432 (interne)</text>
+
+<!-- RDV dans app_net -->
+<rect x="634" y="132" width="200" height="120" rx="8" fill="rgba(79,209,197,0.06)" stroke="rgba(79,209,197,0.3)" stroke-width="0.5"/>
+<text x="646" y="150" font-family="'Space Mono'" font-size="9" fill="#2a8f86">RDV</text>
+<rect x="646" y="158" width="176" height="28" rx="4" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.3)" stroke-width="0.5"/>
+<text x="734" y="177" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">rdv-frontend :3002 → nginx:80</text>
+<rect x="646" y="194" width="176" height="28" rx="4" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.3)" stroke-width="0.5"/>
+<text x="734" y="213" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#4fd1c5">rdv-backend :4000 (interne)</text>
+<rect x="646" y="230" width="176" height="16" rx="4" fill="rgba(104,211,145,0.1)" stroke="rgba(104,211,145,0.3)" stroke-width="0.5"/>
+<text x="734" y="241" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#68d391">mongo-rdv :27017 (interne)</text>
+
+<!-- RH dans app_net -->
+<rect x="852" y="132" width="212" height="120" rx="8" fill="rgba(252,129,129,0.06)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="864" y="150" font-family="'Space Mono'" font-size="9" fill="#c53030">RH</text>
+<rect x="864" y="158" width="184" height="28" rx="4" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="956" y="177" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#fc8181">rh-frontend :3003 → nginx:80</text>
+<rect x="864" y="194" width="184" height="28" rx="4" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="956" y="213" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#fc8181">rh-backend :4000 (interne)</text>
+<rect x="864" y="230" width="184" height="16" rx="4" fill="rgba(104,211,145,0.1)" stroke="rgba(104,211,145,0.3)" stroke-width="0.5"/>
+<text x="956" y="241" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#68d391">postgres-rh :5432 (interne)</text>
+
+<!-- Kali dans app_net (multihomed) -->
+<rect x="416" y="280" width="148" height="44" rx="6" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.4)" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="490" y="298" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#fc8181">Kali</text>
+<text x="490" y="314" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">aussi dans iam + kali_net</text>
+
+<!-- ── kali_net ────────────────────────────────────────────── -->
+<rect x="20" y="330" width="340" height="100" rx="14" fill="rgba(252,129,129,0.05)" stroke="rgba(252,129,129,0.35)" stroke-width="0.5" stroke-dasharray="6 4"/>
+<text x="36" y="352" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#fc8181">kali_net — 172.25.0.0/24</text>
+<text x="36" y="368" font-family="'DM Sans'" font-size="10" fill="#c53030">Réseau isolé attaquant</text>
+<rect x="36" y="378" width="308" height="40" rx="6" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.4)" stroke-width="0.5"/>
+<text x="190" y="394" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#fc8181">Kali — conteneur attaquant</text>
+<text x="190" y="410" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#c53030">Multihomed : iam_net + app_net + kali_net</text>
+
+<!-- Pont iam ↔ app (Keycloak multihomed) -->
+<path d="M184 94 L400 94" fill="none" stroke="#63b3ed" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="292" y="89" text-anchor="middle" font-family="'DM Sans'" font-size="10" fill="#63b3ed">multihomed</text>
+
+<!-- ── Ports exposés hôte ──────────────────────────────── -->
+<rect x="20" y="450" width="1060" height="70" rx="10" fill="rgba(113,128,150,0.06)" stroke="rgba(113,128,150,0.2)" stroke-width="0.5"/>
+<text x="36" y="470" font-family="'DM Sans'" font-size="11" fill="#718096">Ports exposés sur l'hôte Mac (localhost) :</text>
+
+<rect x="36" y="480" width="68" height="28" rx="4" fill="rgba(183,148,244,0.12)" stroke="rgba(183,148,244,0.3)" stroke-width="0.5"/>
+<text x="70" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#b794f4">:3001</text>
+<text x="70" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#9f7aea">DPI</text>
+
+<rect x="112" y="480" width="68" height="28" rx="4" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.3)" stroke-width="0.5"/>
+<text x="146" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#4fd1c5">:3002</text>
+<text x="146" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#2a8f86">RDV</text>
+
+<rect x="188" y="480" width="68" height="28" rx="4" fill="rgba(252,129,129,0.12)" stroke="rgba(252,129,129,0.3)" stroke-width="0.5"/>
+<text x="222" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#fc8181">:3003</text>
+<text x="222" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#c53030">RH</text>
+
+<rect x="264" y="480" width="68" height="28" rx="4" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.3)" stroke-width="0.5"/>
+<text x="298" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">:8080</text>
+<text x="298" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#4a90d9">Keycloak</text>
+
+<rect x="340" y="480" width="68" height="28" rx="4" fill="rgba(246,173,85,0.12)" stroke="rgba(246,173,85,0.3)" stroke-width="0.5"/>
+<text x="374" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#f6ad55">:8200</text>
+<text x="374" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#c9862a">Vault</text>
+
+<rect x="416" y="480" width="68" height="28" rx="4" fill="rgba(79,209,197,0.12)" stroke="rgba(79,209,197,0.3)" stroke-width="0.5"/>
+<text x="450" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#4fd1c5">:6443</text>
+<text x="450" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#2a8f86">phpLDAP</text>
+
+<rect x="492" y="480" width="68" height="28" rx="4" fill="rgba(99,179,237,0.12)" stroke="rgba(99,179,237,0.3)" stroke-width="0.5"/>
+<text x="526" y="494" text-anchor="middle" font-family="'Space Mono'" font-size="11" font-weight="700" fill="#63b3ed">:389</text>
+<text x="526" y="505" text-anchor="middle" font-family="'DM Sans'" font-size="9" fill="#4a90d9">LDAP</text>
+
+<text x="620" y="495" font-family="'DM Sans'" font-size="10" fill="#4a5568">Les backends :4000, postgres :5432 et mongo :27017 ne sont PAS exposés.</text>
+<text x="620" y="510" font-family="'DM Sans'" font-size="10" fill="#4a5568">Accessibles uniquement depuis les conteneurs du même réseau Docker.</text>
+</svg>
+</div>
+
+<!-- LÉGENDE 3 -->
+<div class="legend">
+  <div class="legend-item"><div style="width:32px;height:14px;border:1px dashed #63b3ed;border-radius:3px;flex-shrink:0"></div>iam_net — 172.20.0.0/24</div>
+  <div class="legend-item"><div style="width:32px;height:14px;border:1px dashed #68d391;border-radius:3px;flex-shrink:0"></div>app_net — 172.21.0.0/24</div>
+  <div class="legend-item"><div style="width:32px;height:14px;border:1px dashed #fc8181;border-radius:3px;flex-shrink:0"></div>kali_net — 172.25.0.0/24</div>
+  <div class="legend-item"><div style="width:32px;height:14px;border:1px dashed #888;border-radius:3px;opacity:0.5;flex-shrink:0"></div>Conteneur multihomed (plusieurs réseaux)</div>
+  <div class="legend-item"><div style="width:32px;height:14px;border:1px solid #4a5568;background:rgba(74,85,104,0.1);border-radius:3px;flex-shrink:0"></div>Port non exposé — interne seulement</div>
+</div>
+
+<div style="margin-top:40px;padding-top:20px;border-top:1px solid rgba(99,179,237,0.15);display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:11px;color:#4a5568">
+  <span>HôpitalSim V1 — Schéma des liens</span>
+  <span>Formation Cybersécurité Utopios · Master 2</span>
+</div>
+
+</div>
+</body>
+</html>

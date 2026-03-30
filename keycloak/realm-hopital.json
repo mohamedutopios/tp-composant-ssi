@@ -1,0 +1,100 @@
+{
+  "realm": "hopital",
+  "displayName": "Hôpital Utopios",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "bruteForceProtected": false,
+  "accessTokenLifespan": 3600,
+
+  "roles": {
+    "realm": [
+      { "name": "medecin",  "description": "Médecin et praticien" },
+      { "name": "manager",  "description": "Responsable et cadre" },
+      { "name": "employe",  "description": "Employé hospitalier" },
+      { "name": "admin",    "description": "Administrateur" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "hopital-frontend",
+      "name": "Portail Hôpital",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://localhost:3001/*",
+        "http://localhost:3002/*",
+        "http://localhost:3003/*"
+      ],
+      "webOrigins": ["*"],
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "dpi-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dpi-secret-2024",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "access.token.claim": "true",
+            "multivalued": "true",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "rdv-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "rdv-secret-2024",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "rh-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "rh-secret-2024",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "access.token.claim": "true",
+            "multivalued": "true",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "kali-test",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ]
+}

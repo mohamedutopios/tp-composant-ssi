@@ -1,0 +1,254 @@
+# =============================================================================
+# HôpitalSim V1 — Version corrigée
+# Leçons apprises :
+#   - Pas de fédération LDAP Keycloak (incompatible Bitnami + KC26)
+#   - Users créés directement dans Keycloak via script init
+#   - healthcheck Keycloak avec wget (pas curl)
+#   - depends_on keycloak = service_started (pas service_healthy)
+#   - Pas de :ro sur les fichiers montés (macOS Docker Desktop)
+# =============================================================================
+
+networks:
+  iam_net:  { driver: bridge, ipam: { config: [{ subnet: 172.20.0.0/24 }] } }
+  app_net:  { driver: bridge, ipam: { config: [{ subnet: 172.21.0.0/24 }] } }
+  kali_net: { driver: bridge, ipam: { config: [{ subnet: 172.25.0.0/24 }] } }
+
+volumes:
+  postgres_kc:
+  postgres_dpi:
+  postgres_rh:
+  mongo_rdv:
+  vault_logs:
+
+services:
+
+  # ── PostgreSQL Keycloak ───────────────────────────────────────────────────────
+  postgres-keycloak:
+    image: postgres:15-alpine
+    container_name: hopital-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       keycloak
+      POSTGRES_USER:     keycloak
+      POSTGRES_PASSWORD: keycloak_secret
+    volumes:
+      - postgres_kc:/var/lib/postgresql/data
+    networks: [iam_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Keycloak ──────────────────────────────────────────────────────────────────
+  # Realm importé depuis realm-hopital.json (sans fédération LDAP)
+  # Users créés par le script scripts/init-keycloak.sh après démarrage
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.4
+    container_name: hopital-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KC_DB:                       postgres
+      KC_DB_URL:                   jdbc:postgresql://postgres-keycloak:5432/keycloak
+      KC_DB_USERNAME:              keycloak
+      KC_DB_PASSWORD:              keycloak_secret
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED:             "true"
+      KC_HOSTNAME_STRICT:          "false"
+      KC_HTTP_PORT:                "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-hopital.json:/opt/keycloak/data/import/realm-hopital.json
+    depends_on:
+      postgres-keycloak: { condition: service_healthy }
+    networks: [iam_net, app_net]
+    healthcheck:
+      test: ["CMD-SHELL",
+        "wget -qO- http://localhost:8080/realms/hopital/.well-known/openid-configuration > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    # http://localhost:8080  →  admin / admin
+    # Après démarrage : bash scripts/init-keycloak.sh
+
+  # ── Vault ─────────────────────────────────────────────────────────────────────
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: hopital-vault
+    restart: unless-stopped
+    cap_add: [IPC_LOCK]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID:  "myroot_token_12345"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_ADDR:               "http://0.0.0.0:8200"
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault_logs:/vault/logs
+      - ./vault/init.sh:/vault/init.sh
+    command: server -dev
+    networks: [iam_net]
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # http://localhost:8200  →  Token: myroot_token_12345
+
+  # ── DPI ───────────────────────────────────────────────────────────────────────
+  postgres-dpi:
+    image: postgres:15-alpine
+    container_name: hopital-dpi-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       dpi_hopital
+      POSTGRES_USER:     dpi_user
+      POSTGRES_PASSWORD: dpi_pass_2024
+    volumes:
+      - postgres_dpi:/var/lib/postgresql/data
+      - ./dpi/backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks: [app_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dpi_user -d dpi_hopital"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dpi-backend:
+    build: { context: ./dpi/backend }
+    image: hopital-v1/dpi-backend:latest
+    container_name: hopital-dpi-backend
+    restart: unless-stopped
+    environment:
+      PORT:           "4000"
+      DB_HOST:        postgres-dpi
+      DB_NAME:        dpi_hopital
+      DB_USER:        dpi_user
+      DB_PASSWORD:    dpi_pass_2024
+      KEYCLOAK_URL:   "http://keycloak:8080"
+      KEYCLOAK_REALM: "hopital"
+    depends_on:
+      postgres-dpi: { condition: service_healthy }
+      keycloak:     { condition: service_started }
+    networks: [app_net]
+
+  dpi-frontend:
+    build: { context: ./dpi/frontend }
+    image: hopital-v1/dpi-frontend:latest
+    container_name: hopital-dpi-frontend
+    restart: unless-stopped
+    ports: ["3001:80"]
+    depends_on: [dpi-backend]
+    networks: [app_net]
+    # http://localhost:3001  →  jean.dupont / Jean2024!
+
+  # ── RDV ───────────────────────────────────────────────────────────────────────
+  mongo-rdv:
+    image: mongo:7.0
+    container_name: hopital-rdv-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: rdv_admin
+      MONGO_INITDB_ROOT_PASSWORD: rdv_pass_2024
+      MONGO_INITDB_DATABASE:      rdv_hopital
+    volumes:
+      - mongo_rdv:/data/db
+      - ./rdv/backend/mongo-init.js:/docker-entrypoint-initdb.d/init.js
+    networks: [app_net]
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  rdv-backend:
+    build: { context: ./rdv/backend }
+    image: hopital-v1/rdv-backend:latest
+    container_name: hopital-rdv-backend
+    restart: unless-stopped
+    environment:
+      PORT:           "4000"
+      MONGO_URI:      "mongodb://rdv_admin:rdv_pass_2024@mongo-rdv:27017/rdv_hopital?authSource=admin"
+      KEYCLOAK_URL:   "http://keycloak:8080"
+      KEYCLOAK_REALM: "hopital"
+    depends_on:
+      mongo-rdv: { condition: service_healthy }
+      keycloak:  { condition: service_started }
+    networks: [app_net]
+
+  rdv-frontend:
+    build: { context: ./rdv/frontend }
+    image: hopital-v1/rdv-frontend:latest
+    container_name: hopital-rdv-frontend
+    restart: unless-stopped
+    ports: ["3002:80"]
+    depends_on: [rdv-backend]
+    networks: [app_net]
+    # http://localhost:3002  →  pierre.employe / Pierre2024!
+
+  # ── RH ────────────────────────────────────────────────────────────────────────
+  postgres-rh:
+    image: postgres:15-alpine
+    container_name: hopital-rh-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       rh_hopital
+      POSTGRES_USER:     rh_user
+      POSTGRES_PASSWORD: rh_pass_2024
+    volumes:
+      - postgres_rh:/var/lib/postgresql/data
+      - ./rh/backend/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks: [app_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rh_user -d rh_hopital"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rh-backend:
+    build: { context: ./rh/backend }
+    image: hopital-v1/rh-backend:latest
+    container_name: hopital-rh-backend
+    restart: unless-stopped
+    environment:
+      PORT:           "4000"
+      DB_HOST:        postgres-rh
+      DB_NAME:        rh_hopital
+      DB_USER:        rh_user
+      DB_PASSWORD:    rh_pass_2024
+      KEYCLOAK_URL:   "http://keycloak:8080"
+      KEYCLOAK_REALM: "hopital"
+    depends_on:
+      postgres-rh: { condition: service_healthy }
+      keycloak:    { condition: service_started }
+    networks: [app_net]
+
+  rh-frontend:
+    build: { context: ./rh/frontend }
+    image: hopital-v1/rh-frontend:latest
+    container_name: hopital-rh-frontend
+    restart: unless-stopped
+    ports: ["3003:80"]
+    depends_on: [rh-backend]
+    networks: [app_net]
+    # http://localhost:3003  →  marie.manager / Marie2024!
+
+  # ── Kali ──────────────────────────────────────────────────────────────────────
+  kali:
+    image: kalilinux/kali-rolling:latest
+    container_name: hopital-kali
+    restart: "no"
+    entrypoint: >
+      sh -c "
+        apt-get update -qq 2>/dev/null &&
+        apt-get install -y -qq curl wget python3 nmap hydra sqlmap netcat-openbsd jq ldap-utils 2>/dev/null &&
+        echo '=== Kali prêt ===' &&
+        tail -f /dev/null
+      "
+    volumes:
+      - ./kali:/kali
+    networks: [app_net, iam_net, kali_net]
