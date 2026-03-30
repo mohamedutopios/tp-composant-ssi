@@ -1,0 +1,85 @@
+
+<div id="diagram" style="padding: 1rem 0"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    primaryColor: dark ? '#1e293b' : '#f1f5f9',
+    primaryTextColor: dark ? '#e2e8f0' : '#1e293b',
+    primaryBorderColor: dark ? '#475569' : '#94a3b8',
+    lineColor: dark ? '#64748b' : '#64748b',
+    secondaryColor: dark ? '#0f172a' : '#f8fafc',
+    tertiaryColor: dark ? '#0f172a' : '#f8fafc',
+  },
+  flowchart: { curve: 'basis', padding: 20, nodeSpacing: 40, rankSpacing: 60 }
+});
+
+const graph = `
+flowchart TB
+
+  subgraph USERS["Utilisateurs — navigateur web"]
+    jean["jean.dupont<br/><small>médecin</small>"]
+    pierre["pierre.employe<br/><small>employé</small>"]
+    marie["marie.manager<br/><small>manager</small>"]
+  end
+
+  subgraph IAM["IAM — iam_net 172.20.0.0/24"]
+    KC["Keycloak :8080<br/>JWT RS256 · realm hopital"]
+    VT["Vault :8200<br/>Secrets BDD · audit log"]
+    PG_KC["PostgreSQL KC<br/>Sessions · realm"]
+  end
+
+  subgraph APPS["Applications — app_net 172.21.0.0/24 — code identique V1"]
+    DPI["DPI :3001<br/>Dossier patient<br/>nginx · Node.js · PostgreSQL"]
+    RDV["RDV :3002<br/>Rendez-vous<br/>nginx · Node.js · MongoDB"]
+    RH["RH :3003<br/>Ressources humaines<br/>nginx · Node.js · PostgreSQL · IBAN"]
+  end
+
+  subgraph SSI["SSI — soc_net 172.22.0.0/24 — nouveau en V2"]
+    SPL["Splunk SIEM<br/>:8000 · HEC :8088<br/>Corrélation SPL"]
+    WM["Wazuh Manager<br/>:1514 · :55000<br/>Règles 100001-100051<br/>firewall-drop"]
+    WI["Wazuh Indexer<br/>:9200<br/>OpenSearch<br/>Alertes"]
+    WD["Wazuh Dashboard<br/>:5601<br/>SOC · admin/admin"]
+    SOC["SOC Analyste<br/>Splunk :8000 · Wazuh :5601"]
+  end
+
+  jean & pierre & marie -->|POST /token| KC
+  KC -->|JWT RS256| jean & pierre & marie
+  KC --- PG_KC
+  KC -->|Bearer JWT| DPI & RDV & RH
+
+  DPI -->|logs HEC| SPL
+  RDV -->|logs HEC| SPL
+  RH  -->|logs HEC| SPL
+  VT  -->|audit log| SPL
+
+  DPI -->|syslog :1514| WM
+  RDV -->|syslog :1514| WM
+  RH  -->|syslog :1514| WM
+
+  WM -->|alertes JSON| WI
+  WM -.->|alertes| SPL
+  WI --> WD
+
+  SOC --> SPL
+  SOC --> WD
+`;
+
+const { svg } = await mermaid.render('hopital-v2-graph', graph);
+document.getElementById('diagram').innerHTML = svg;
+
+const svgEl = document.querySelector('#diagram svg');
+if (svgEl) {
+  svgEl.style.width = '100%';
+  svgEl.style.height = 'auto';
+  svgEl.removeAttribute('height');
+}
+</script>
